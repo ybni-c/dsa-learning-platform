@@ -8,7 +8,7 @@ export default function TopNavigation() {
   const navLinks = [
     { path: '/', label: '1. 註冊' },
     { path: '/dashboard', label: '2. 儀表板' },
-    { path: '/course/ai-102', label: '3. 課程資訊' },
+    { path: '/course/cs-201', label: '3. 課程資訊' },
     { path: '/classroom', label: '4. 虛擬教室' },
     { path: '/library', label: '5. 資源庫' },
     { path: '/feedback', label: '6. 回饋' },

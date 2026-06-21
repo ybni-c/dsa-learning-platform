@@ -17,7 +17,7 @@ export default function Feedback() {
             
             {/* 滿意度評分 (Pre-course / Post-course survey) */}
             <div>
-              <h3 className="text-lg font-bold text-slate-900 mb-4">1. 您對「AI-102」課程的整體滿意度？</h3>
+              <h3 className="text-lg font-bold text-slate-900 mb-4">1. 您對「CS-201」課程的整體滿意度？</h3>
               <div className="flex justify-between items-center bg-[#F8FAFC] p-2 rounded-2xl border border-slate-100">
                 {[1, 2, 3, 4, 5].map((score) => (
                   <label key={score} className="flex-1 cursor-pointer group">
