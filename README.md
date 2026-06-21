@@ -62,8 +62,9 @@ npm run dev
 ```
 啟動後，請開啟瀏覽器並造訪 http://localhost:5173。
 
-📂 專案結構 (Project Structure)
-Plaintext
+## 📂 專案結構 (Project Structure)
+
+```text
 src/
 ├── components/          # 可重用的 UI 積木 (Components)
 │   ├── AIAssistant.jsx      # 全域懸浮 AI 助教
@@ -80,7 +81,8 @@ src/
 │   └── VirtualClassroom.jsx # 虛擬教室與播放器
 ├── App.jsx              # 核心路由設定檔
 └── main.jsx             # React 進入點
-🎯 學習目標與應用場景
+```
+###🎯 學習目標與應用場景###
 本專案 (CS-201) 著重於以下演算法領域的學習呈現：
 
 Big O 時間與空間複雜度分析
@@ -92,3 +94,12 @@ Big O 時間與空間複雜度分析
 樹 (Trees) 與圖 (Graphs) 的走訪與實作
 
 Disclaimer: 本專案為前端開發實踐與 UI/UX 展示作品，無串接真實後端資料庫，敏感用戶數據與學習狀態皆保存在本地瀏覽器緩存中。
+
+
+替換並存檔後，您可以依序執行以下指令，把修正好的排版更新到 GitHub 上：
+
+```bash
+git add README.md
+git commit -m "docs: 修復 README 專案結構排版"
+git push origin main
+```
