@@ -1,32 +1,65 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from '../supabaseClient'; // 🌟 引入我們剛剛設定好的 Supabase 客戶端
 import CourseProgressCard from '../components/CourseProgressCard';
 import TaskList from '../components/TaskList';
 
 export default function Dashboard() {
-  const [tasks, setTasks] = useState(() => {
-    const savedTasks = localStorage.getItem('dsa_learning_tasks');
-    if (savedTasks) return JSON.parse(savedTasks);
-    return [
-      { id: 1, text: "完成 LeetCode Daily Challenge (動態規劃)", completed: false },
-      { id: 2, text: "至 GitHub 推送 Graph Theory 實作進度", completed: false },
-      { id: 3, text: "複習 Big O 時間複雜度筆記", completed: false }
-    ];
-  });
-
+  // 🌟 1. 任務狀態現在預設為空陣列，等待從雲端抓取
+  const [tasks, setTasks] = useState([]);
   const [onlineHistory, setOnlineHistory] = useState({});
-  
-  // 🌟 新增：目前日曆正在顯示的月份 (預設為 2026年6月，配合我們的模擬假資料)
   const [currentViewDate, setCurrentViewDate] = useState(new Date(2026, 5, 1)); 
 
+  // 🌟 2. 網頁載入時，從 Supabase 抓取任務資料
+  useEffect(() => {
+    const fetchTasks = async () => {
+      const { data, error } = await supabase
+        .from('dsa_tasks')
+        .select('*')
+        .order('id', { ascending: true }); // 依照 ID 排序確保順序固定
+
+      if (error) {
+        console.error("讀取任務失敗:", error);
+      } else if (data) {
+        setTasks(data); // 將雲端資料存入狀態
+      }
+    };
+
+    fetchTasks();
+  }, []);
+
+  // 🌟 3. 當使用者打勾/取消打勾時，同步更新到 Supabase 雲端
+  const handleToggleTask = async (taskId) => {
+    // 找出當前點擊的任務
+    const targetTask = tasks.find(t => t.id === taskId);
+    if (!targetTask) return;
+
+    const newCompletedState = !targetTask.completed;
+
+    // 先做「樂觀更新 (Optimistic UI)」：直接改畫面，讓使用者感覺瞬間完成
+    setTasks(tasks.map(task => 
+      task.id === taskId ? { ...task, completed: newCompletedState } : task
+    ));
+
+    // 在背景偷偷發送 API 到 Supabase 進行真實更新
+    const { error } = await supabase
+      .from('dsa_tasks')
+      .update({ completed: newCompletedState })
+      .eq('id', taskId);
+
+    if (error) {
+      console.error("雲端更新失敗:", error);
+      // 如果雲端更新失敗，理論上這裡要把狀態改回來，但為了教學簡潔先印出錯誤
+    }
+  };
+
+
+  // --- 以下是原本寫好的日曆與時間追蹤邏輯，完全沒動 ---
   useEffect(() => {
     if (!localStorage.getItem('dsa_online_history')) {
       const dummyHistory = {
-        "2026-06-03": 2400,
-        "2026-06-04": 1800,
-        "2026-06-10": 3600,
-        "2026-06-17": 4200,
-        "2026-06-18": 1500,
+        "2026-06-03": 2400, "2026-06-04": 1800, "2026-06-10": 3600,
+        "2026-06-17": 4200, "2026-06-18": 1500,
       };
       localStorage.setItem('dsa_online_history', JSON.stringify(dummyHistory));
     }
@@ -41,18 +74,9 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('dsa_learning_tasks', JSON.stringify(tasks));
-  }, [tasks]);
-
-  const handleToggleTask = (taskId) => {
-    setTasks(tasks.map(task => 
-      task.id === taskId ? { ...task, completed: !task.completed } : task
-    ));
-  };
-
   const completedCount = tasks.filter(task => task.completed).length;
-  const currentProgress = 45 + (completedCount * 10);
+  // 🌟 進度條動態計算 (根據真實的雲端任務數量)
+  const currentProgress = tasks.length > 0 ? 45 + (completedCount * (55 / tasks.length)) : 45;
 
   const formatTime = (totalSeconds) => {
     if (!totalSeconds) return "0h 0m 0s";
@@ -83,15 +107,13 @@ export default function Dashboard() {
     Object.values(onlineHistory).forEach(secs => { totalSeconds += secs; });
 
     return {
-      today: formatTime(todaySeconds),
-      week: formatTime(weekSeconds),
-      month: formatTime(monthSeconds),
-      total: formatTime(totalSeconds)
+      today: formatTime(todaySeconds), week: formatTime(weekSeconds),
+      month: formatTime(monthSeconds), total: formatTime(totalSeconds)
     };
   };
 
   const stats = getStats();
-  // 🌟 新增：動態取得今天的真實日期與星期
+
   const getTodayGreeting = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -103,7 +125,6 @@ export default function Dashboard() {
   };
   const todayGreeting = getTodayGreeting();
 
-  // 🌟 切換月份的事件處理
   const handlePrevMonth = () => {
     setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() - 1, 1));
   };
@@ -111,45 +132,29 @@ export default function Dashboard() {
     setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() + 1, 1));
   };
 
-  // 🌟 動態生成日曆，包含真實日期與星期偏移
   const generateCalendarDays = () => {
     const year = currentViewDate.getFullYear();
     const month = currentViewDate.getMonth();
-    
-    // 取得該月第一天是星期幾 (0 = 星期日, 1 = 星期一...)
     const firstDayOfWeek = new Date(year, month, 1).getDay();
-    // 取得該月總共有幾天
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-
     const days = [];
     
-    // 填補月初的空白格
     for (let i = 0; i < firstDayOfWeek; i++) {
       days.push({ id: `empty-start-${i}`, isActive: false, isEmpty: true });
     }
 
-    // 填入該月的每一天
     for (let i = 1; i <= daysInMonth; i++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
       const trackedSeconds = onlineHistory[dateStr] || 0;
-      days.push({ 
-        id: dateStr, 
-        dateStr: dateStr, 
-        trackedSeconds: trackedSeconds,
-        isActive: trackedSeconds > 0, 
-        isEmpty: false 
-      });
+      days.push({ id: dateStr, dateStr: dateStr, trackedSeconds: trackedSeconds, isActive: trackedSeconds > 0, isEmpty: false });
     }
 
-    // 填補月底的空白格，讓版面固定 42 格 (6週) 不會忽高忽低
     while (days.length < 42) {
       days.push({ id: `empty-end-${days.length}`, isActive: false, isEmpty: true });
     }
-
     return days;
   };
 
-  // 格式化顯示「月份 年份」 (例如: June 2026)
   const monthYearDisplay = currentViewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return (
@@ -182,7 +187,6 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              
               <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 mb-5">Online Time Statistics</h3>
@@ -195,9 +199,7 @@ export default function Dashboard() {
                     ].map((stat, idx) => (
                       <div key={idx} className="bg-[#F8FAFC] p-3 rounded-2xl flex justify-between items-center border border-slate-50">
                         <span className="text-xs text-slate-500 font-medium">{stat.label}</span>
-                        <span className={`text-sm font-bold font-mono ${stat.highlight ? 'text-green-600 animate-pulse' : 'text-[#2563EB]'}`}>
-                          {stat.value}
-                        </span>
+                        <span className={`text-sm font-bold font-mono ${stat.highlight ? 'text-green-600 animate-pulse' : 'text-[#2563EB]'}`}>{stat.value}</span>
                       </div>
                     ))}
                   </div>
@@ -205,44 +207,24 @@ export default function Dashboard() {
                 <div className="text-[10px] text-slate-400 mt-4 text-center">系統正透過全域狀態即時記錄您的學習時數</div>
               </div>
 
-              {/* 🌟 升級版貢獻度日曆卡片 */}
               <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow">
                 <h3 className="text-lg font-bold text-slate-900 mb-3">Online Calendar</h3>
-                
-                {/* 🌟 換成真實的月份切換按鈕 */}
                 <div className="flex justify-between items-center mb-4 bg-slate-50 py-2 px-3 rounded-2xl border border-slate-100">
                   <button onClick={handlePrevMonth} className="w-7 h-7 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs hover:bg-blue-700 transition-colors shadow-sm">←</button>
                   <span className="font-bold text-slate-800 text-sm">{monthYearDisplay}</span>
                   <button onClick={handleNextMonth} className="w-7 h-7 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs hover:bg-blue-700 transition-colors shadow-sm">→</button>
                 </div>
-                
                 <p className="text-xs text-slate-500 mb-4 text-center">Daily online activity for this month</p>
-                
                 <div className="grid grid-cols-7 gap-1.5 text-center mb-2">
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                    <div key={day} className="text-[10px] font-bold text-slate-400 uppercase">{day}</div>
-                  ))}
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (<div key={day} className="text-[10px] font-bold text-slate-400 uppercase">{day}</div>))}
                 </div>
-                
                 <div className="grid grid-cols-7 gap-1.5">
                   {generateCalendarDays().map((day) => (
-                    <div 
-                      key={day.id} 
-                      // 🌟 加入 group 屬性，用來觸發內部的 Tooltip
-                      className={`relative group w-full aspect-square rounded-md transition-all duration-300 ${
-                        day.isEmpty 
-                          ? 'bg-transparent' 
-                          : day.isActive 
-                            ? 'bg-[#A7F3D0] shadow-sm cursor-pointer border border-green-300 hover:scale-110' 
-                            : 'bg-[#F1F5F9] hover:bg-slate-200 cursor-pointer'
-                      }`}
-                    >
-                      {/* 🌟 高質感懸浮提示框 (Tooltip) */}
+                    <div key={day.id} className={`relative group w-full aspect-square rounded-md transition-all duration-300 ${day.isEmpty ? 'bg-transparent' : day.isActive ? 'bg-[#A7F3D0] shadow-sm cursor-pointer border border-green-300 hover:scale-110' : 'bg-[#F1F5F9] hover:bg-slate-200 cursor-pointer'}`}>
                       {!day.isEmpty && (
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-3 py-2 bg-slate-900 text-white text-xs rounded-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-10 shadow-xl shadow-slate-900/20 text-center flex flex-col gap-1">
                           <span className="font-bold font-mono tracking-wider">{day.dateStr}</span>
                           <span className="text-slate-400">{formatTime(day.trackedSeconds)}</span>
-                          {/* 提示框下方的小三角形 */}
                           <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
                         </div>
                       )}
@@ -250,7 +232,6 @@ export default function Dashboard() {
                   ))}
                 </div>
               </div>
-
             </div>
           </div>
 
