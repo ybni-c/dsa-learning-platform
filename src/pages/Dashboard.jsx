@@ -54,23 +54,22 @@ export default function Dashboard() {
   };
 
 
-  // --- 以下是原本寫好的日曆與時間追蹤邏輯，完全沒動 ---
   useEffect(() => {
-    if (!localStorage.getItem('dsa_online_history')) {
-      const dummyHistory = {
-        "2026-06-03": 2400, "2026-06-04": 1800, "2026-06-10": 3600,
-        "2026-06-17": 4200, "2026-06-18": 1500,
-      };
-      localStorage.setItem('dsa_online_history', JSON.stringify(dummyHistory));
-    }
-
-    const updateStats = () => {
-      const saved = localStorage.getItem('dsa_online_history');
-      if (saved) setOnlineHistory(JSON.parse(saved));
+    const fetchHistory = async () => {
+      const { data } = await supabase.from('dsa_online_history').select('*');
+      if (data) {
+        // 將陣列轉回我們日曆需要的物件格式
+        const historyObj = {};
+        data.forEach(item => {
+          historyObj[item.date] = item.seconds;
+        });
+        setOnlineHistory(historyObj);
+      }
     };
 
-    updateStats();
-    const interval = setInterval(updateStats, 1000);
+    fetchHistory();
+    // 設置一個輕量的定時刷新，確保畫面上的秒數會動
+    const interval = setInterval(fetchHistory, 5000); 
     return () => clearInterval(interval);
   }, []);
 

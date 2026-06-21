@@ -13,29 +13,27 @@ import Completion from './pages/Completion';
 
 export default function App() {
   
-  // 🌟 全域在線時間追蹤器 (跨頁面計時)
+  // 🌟 改良後的全域計時器：即時同步到 Supabase
   useEffect(() => {
-    const trackTime = () => {
-      // 取得本地時間的 YYYY-MM-DD 字串
-      const now = new Date();
-      const offset = now.getTimezoneOffset();
-      const localDate = new Date(now.getTime() - (offset * 60 * 1000));
-      const todayStr = localDate.toISOString().split('T')[0];
+    const trackTime = async () => {
+      const todayStr = new Date().toISOString().split('T')[0];
 
-      // 取出舊的歷史紀錄
-      const savedHistory = localStorage.getItem('dsa_online_history');
-      const history = savedHistory ? JSON.parse(savedHistory) : {};
+      // 1. 先從 Supabase 抓取當前資料
+      const { data } = await supabase
+        .from('dsa_online_history')
+        .select('seconds')
+        .eq('date', todayStr)
+        .single();
 
-      // 今天的在線秒數 + 1
-      history[todayStr] = (history[todayStr] || 0) + 1;
+      const currentSeconds = data ? data.seconds : 0;
 
-      // 存回 localStorage
-      localStorage.setItem('dsa_online_history', JSON.stringify(history));
+      // 2. 更新資料庫
+      await supabase
+        .from('dsa_online_history')
+        .upsert({ date: todayStr, seconds: currentSeconds + 1 }, { onConflict: 'date' });
     };
 
-    // 每 1 秒執行一次計時
     const interval = setInterval(trackTime, 1000);
-
     return () => clearInterval(interval);
   }, []);
 
