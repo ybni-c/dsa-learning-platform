@@ -7,7 +7,7 @@
 
 這是一個專為「資料結構與演算法 (DSA)」設計的現代化線上學習系統 (LMS)。採用「優雅極簡風 (Elegant Minimalist)」的 UI/UX 設計語言，旨在提供無干擾、高專注度的程式碼學習體驗。
 
-🌐 **Live Demo:** [點此查看線上預覽](https://您的vercel網址.vercel.app) *(請替換為您的實際網址)*
+🌐 **Live Demo:** [點此查看線上預覽](https://dsa-learning-platform-ten.vercel.app/) 
 
 ---
 
