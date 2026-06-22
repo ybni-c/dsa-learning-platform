@@ -1,10 +1,5 @@
-這是一份為您的專案量身打造的、極具專業度與學術涵養的 `README.md`。這份 README 不僅展示了您的技術能力（React + Supabase），更完美突顯了您專案最大的亮點：**「深厚的教育心理學與學習科學底蘊」**。
 
-您可以直接複製以下內容，並貼上至您的 `README.md` 檔案中：
 
----
-
-```markdown
 # 🧠 Data Structures & Algorithms - 適應性數位學習平台 (Adaptive LMS)
 
 [![React](https://img.shields.io/badge/React-18.x-blue.svg)](https://reactjs.org/)
