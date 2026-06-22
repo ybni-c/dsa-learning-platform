@@ -1,106 +1,148 @@
-import React from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
 
 export default function Registration() {
+  const [isLoginView, setIsLoginView] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState({ text: '', type: '' });
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  // 🌟 UX 優化：如果已經登入，直接踢回 Dashboard，不讓他們看到登入頁面
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate('/dashboard');
+      }
+    };
+    checkSession();
+  }, [navigate]);
+
+  // 處理註冊 (需要 Email 驗證)
+  const handleSignUp = async (e) => {
     e.preventDefault();
-    // 模擬註冊成功，直接導向學習儀表板
-    navigate('/dashboard');
+    setLoading(true);
+    setMessage({ text: '', type: '' });
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (error) {
+      setMessage({ text: error.message, type: 'error' });
+    } else {
+      // 註冊成功，提示去信箱收信
+      setMessage({ 
+        text: '註冊成功！請檢查您的信箱並點擊驗證連結，驗證後即可登入。', 
+        type: 'success' 
+      });
+      // 註冊完後切換回登入畫面，等他們驗證完回來登入
+      setIsLoginView(true); 
+    }
+    setLoading(false);
+  };
+
+  // 處理登入
+  const handleSignIn = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage({ text: '', type: '' });
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      // 若 Email 尚未驗證，Supabase 會在這裡報錯 "Email not confirmed"
+      setMessage({ text: error.message, type: 'error' });
+    } else {
+      // 登入成功，跳轉到 Dashboard
+      navigate('/dashboard');
+    }
+    setLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFCFB] text-slate-800 font-sans flex items-center justify-center p-6 animate-fade-in">
-      <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-        
-        {/* 左側：歡迎區 (Welcome Section) */}
-        <div className="space-y-8 hidden lg:block">
-          <div className="inline-block px-3 py-1 bg-[#F0F4F8] text-slate-600 rounded-full text-xs font-bold tracking-widest uppercase mb-4">
-            Code Your Way Up
+    <div className="min-h-screen bg-[#FDFCFB] flex items-center justify-center p-6 animate-fade-in">
+      <div className="max-w-md w-full">
+        {/* Logo 區塊 */}
+        <div className="text-center mb-10">
+          <div className="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-4 shadow-lg shadow-slate-900/20">
+            D
           </div>
-          <h1 className="text-5xl font-serif text-slate-900 leading-tight">
-            掌握底層邏輯 <br />
-            <span className="italic text-slate-600">突破演算法瓶頸</span>
+          <h1 className="text-3xl font-serif text-slate-900 mb-2">
+            Data Structures & Algorithms
           </h1>
-          <p className="text-lg text-slate-500 leading-relaxed max-w-md">
-            歡迎來到 CS-201 演算法實戰平台。在這裡，我們用最高效的解題邏輯與精簡的程式架構，全面提升您的程式設計思維。
-          </p>
-          
-          <div className="space-y-6 pt-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-xl">
-                💻
-              </div>
-              <p className="text-sm font-medium text-slate-600">50+ 題經典 LeetCode 題型深度拆解</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-xl">
-                🚀
-              </div>
-              <p className="text-sm font-medium text-slate-600">高效通過一線科技公司技術面試</p>
-            </div>
-          </div>
+          <p className="text-slate-500">基於學習科學的適應性演算法訓練平台</p>
         </div>
 
-        {/* 右側：註冊表單 (Registration Form) */}
-        <div className="bg-white border border-slate-200 rounded-[2.5rem] p-10 md:p-14 shadow-xl shadow-slate-200/50 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[#FDFCFB] rounded-full -mr-16 -mt-16 border border-slate-100"></div>
-          
-          <div className="relative z-10">
-            <h2 className="text-3xl font-serif text-slate-900 mb-2">建立學習帳號</h2>
-            <p className="text-slate-400 text-sm mb-10">立即開啟您的演算法修煉之旅。</p>
+        {/* 登入/註冊卡片 */}
+        <div className="bg-white rounded-3xl p-8 shadow-xl border border-slate-100">
+          <h2 className="text-2xl font-bold text-slate-900 mb-6 text-center">
+            {isLoginView ? '學員登入' : '建立帳號'}
+          </h2>
+
+          {/* 訊息提示區塊 (成功或錯誤) */}
+          {message.text && (
+            <div className={`p-4 rounded-xl mb-6 text-sm font-medium ${
+              message.type === 'error' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-700 border border-green-100'
+            }`}>
+              {message.text}
+            </div>
+          )}
+
+          <form onSubmit={isLoginView ? handleSignIn : handleSignUp} className="space-y-5">
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-2">電子郵件 (Email)</label>
+              <input 
+                type="email" 
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                placeholder="alex@example.com"
+              />
+            </div>
             
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-widest text-slate-400 ml-1">電子郵件地址</label>
-                <input 
-                  type="email" 
-                  required
-                  className="w-full bg-[#F8FAFC] border border-slate-100 rounded-2xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all placeholder:text-slate-300"
-                  placeholder="alex@example.com"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-widest text-slate-400 ml-1">設定密碼</label>
-                <input 
-                  type="password" 
-                  required
-                  className="w-full bg-[#F8FAFC] border border-slate-100 rounded-2xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all placeholder:text-slate-300"
-                  placeholder="至少 8 個字元"
-                />
-              </div>
-
-              <div className="flex items-center gap-3 py-2">
-                <input type="checkbox" required className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900" id="terms" />
-                <label htmlFor="terms" className="text-sm text-slate-500">
-                  我已閱讀並同意 <span className="text-slate-900 underline font-medium cursor-pointer">線上課程學習契約</span>
-                </label>
-              </div>
-
-              <button type="submit" className="w-full bg-slate-900 text-white rounded-2xl py-4 font-bold text-lg hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 active:scale-[0.98]">
-                立即註冊並登入
-              </button>
-            </form>
-
-            <div className="mt-10 relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-100"></div>
-              </div>
-              <div className="relative flex justify-center text-xs uppercase tracking-widest text-slate-300">
-                <span className="bg-white px-4 font-bold">或使用以下方式快捷登入</span>
-              </div>
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-2">密碼 (Password)</label>
+              <input 
+                type="password" 
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                placeholder="••••••••"
+              />
             </div>
 
-            <div className="mt-8 flex gap-4">
-              <button onClick={() => navigate('/dashboard')} className="flex-1 border border-slate-200 rounded-2xl py-3 flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors">
-                <span className="text-sm font-medium text-slate-600">Google</span>
-              </button>
-              <button onClick={() => navigate('/dashboard')} className="flex-1 border border-slate-200 rounded-2xl py-3 flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors">
-                <span className="text-sm font-medium text-slate-600">GitHub</span>
-              </button>
-            </div>
+            <button 
+              type="submit" 
+              disabled={loading}
+              className={`w-full text-white font-bold py-3.5 rounded-xl shadow-lg transition-all ${
+                loading ? 'bg-slate-400 cursor-not-allowed' : 'bg-[#2563EB] hover:bg-blue-600 hover:-translate-y-0.5 shadow-blue-500/30'
+              }`}
+            >
+              {loading ? '處理中...' : (isLoginView ? '登入系統' : '註冊帳號 (需 Email 驗證)')}
+            </button>
+          </form>
+
+          <div className="mt-8 text-center text-sm text-slate-500 border-t border-slate-100 pt-6">
+            {isLoginView ? '還沒有帳號嗎？' : '已經有帳號了？'}
+            <button 
+              onClick={() => {
+                setIsLoginView(!isLoginView);
+                setMessage({ text: '', type: '' }); // 切換時清空訊息
+              }} 
+              className="font-bold text-[#2563EB] ml-2 hover:underline focus:outline-none"
+            >
+              {isLoginView ? '立即註冊' : '返回登入'}
+            </button>
           </div>
         </div>
 

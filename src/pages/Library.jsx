@@ -1,64 +1,121 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from '../supabaseClient'; 
 
 export default function Library() {
-  const [activeTab, setActiveTab] = useState('bugs'); // 預設顯示「踩坑博物館」
+  const [activeTab, setActiveTab] = useState('bugs');
+  const [communityPosts, setCommunityPosts] = useState([]);
+  
+  const [showPostForm, setShowPostForm] = useState(false);
+  const [newPost, setNewPost] = useState({
+    title: '',
+    content: '',
+    type: 'bug',
+    tags: '',
+    isAnonymous: false
+  });
 
-  // 模擬社群貢獻的資料 (重點：強調犯錯與分享，而非完美的解答)
-  const communityPosts = [
-    {
-      id: 1,
-      type: 'bug',
-      author: 'Jamie',
-      avatar: '👩‍💻',
-      title: 'DP 陣列忘記初始化的血淚史',
-      content: '昨天解 Climbing Stairs，卡了三個小時，才發現 dp[0] 沒有設成 1，導致後面全部變成 NaN。大家記得 DP 陣列的 Base Case 一定要先給值啊！😭',
-      tags: ['動態規劃', '粗心失誤'],
-      likes: 24,
-      isAnonymous: false
-    },
-    {
-      id: 2,
-      type: 'share',
-      author: 'Alex (You)',
-      avatar: '👤',
-      title: '火車座位譬喻法真的很有用',
-      content: '剛剛在虛擬教室學到用「火車連號座位」來理解 Array 的連續記憶體，突然就懂了為什麼 Array 插入新資料的時間複雜度是 O(n)。分享給大家！',
-      tags: ['學習心得', '陣列'],
-      likes: 15,
-      isAnonymous: false
-    },
-    {
-      id: 3,
-      type: 'bug',
-      author: 'Anonymous 學習者',
-      avatar: '👻',
-      title: '永遠搞不懂的雙指標邊界',
-      content: '每次寫 While(left <= right) 還是 While(left < right) 都會跑出無限迴圈，最後只能通通試一次交卷。有沒有人有好的判斷直覺可以分享？',
-      tags: ['求救', '雙指標'],
-      likes: 42,
-      isAnonymous: true
+  const fetchPosts = async () => {
+    const { data, error } = await supabase
+      .from('dsa_community_posts')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) {
+      setCommunityPosts(data);
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const handleSubmitPost = async (e) => {
+    e.preventDefault();
+    if (!newPost.title.trim() || !newPost.content.trim()) return;
+
+    const tagsArray = newPost.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
+
+    const postData = {
+      title: newPost.title,
+      content: newPost.content,
+      type: newPost.type,
+      tags: tagsArray,
+      is_anonymous: newPost.isAnonymous,
+      author: newPost.isAnonymous ? 'Anonymous 學習者' : 'Alex (You)',
+      avatar: newPost.isAnonymous ? '👻' : '👤',
+      likes: 0
+    };
+
+    const { error } = await supabase.from('dsa_community_posts').insert([postData]);
+    
+    if (!error) {
+      setNewPost({ title: '', content: '', type: 'bug', tags: '', isAnonymous: false });
+      setShowPostForm(false);
+      fetchPosts();
+    } else {
+      console.error("發文失敗:", error);
+    }
+  };
+
+  const handleLike = async (id, currentLikes) => {
+    setCommunityPosts(communityPosts.map(post => 
+      post.id === id ? { ...post, likes: currentLikes + 1 } : post
+    ));
+
+    await supabase
+      .from('dsa_community_posts')
+      .update({ likes: currentLikes + 1 })
+      .eq('id', id);
+  };
+
+  // 🌟 新增：刪除貼文的核心邏輯
+  const handleDeletePost = async (id) => {
+    // 加上防呆確認，避免使用者誤按
+    const confirmDelete = window.confirm("確定要刪除這篇貼文嗎？刪除後將無法恢復。");
+    if (!confirmDelete) return;
+
+    // 樂觀更新 (Optimistic UI)：先從畫面上瞬間移除該貼文
+    setCommunityPosts(currentPosts => currentPosts.filter(post => post.id !== id));
+
+    // 背景連線到 Supabase 進行真實刪除
+    const { error } = await supabase
+      .from('dsa_community_posts')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error("刪除失敗:", error);
+      alert("雲端刪除失敗，請稍後再試。");
+      fetchPosts(); // 如果刪除失敗，重新從資料庫抓取資料把貼文補回來
+    }
+  };
+
+  const getTimeAgo = (dateString) => {
+    const postDate = new Date(dateString);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - postDate) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return '剛剛';
+    if (diffInMinutes < 60) return `${diffInMinutes} 分鐘前`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} 小時前`;
+    return `${Math.floor(diffInMinutes / 1440)} 天前`;
+  };
 
   return (
     <div className="min-h-screen bg-[#FDFCFB] text-slate-800 font-sans p-6 md:p-12 animate-fade-in">
       <div className="max-w-6xl mx-auto space-y-10">
         
-        {/* 頂部標頭與導航 */}
         <header className="pb-6 flex justify-between items-end border-b border-slate-100">
           <div>
             <h1 className="text-4xl font-serif text-slate-900 mb-2">共學社群與資源庫</h1>
-            <p className="text-slate-500 text-sm tracking-wide">
-              Community-Centered Learning Hub
-            </p>
+            <p className="text-slate-500 text-sm tracking-wide">Community-Centered Learning Hub</p>
           </div>
           <Link to="/dashboard" className="bg-white border border-slate-200 text-slate-600 px-6 py-2.5 rounded-full text-sm font-medium hover:bg-slate-50 shadow-sm transition-colors">
             返回主頁
           </Link>
         </header>
 
-        {/* 🌟 核心理念宣導區 (Safe Environment 建立) */}
         <section className="bg-slate-900 text-white rounded-3xl p-8 md:p-10 shadow-lg relative overflow-hidden flex flex-col md:flex-row gap-8 items-center">
           <div className="absolute -right-20 -top-20 w-64 h-64 bg-blue-500 opacity-20 rounded-full blur-3xl"></div>
           <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-amber-500 opacity-20 rounded-full blur-3xl"></div>
@@ -69,37 +126,76 @@ export default function Library() {
             </div>
             <h2 className="text-3xl font-serif mb-4">在這裡，犯錯是進步的勳章。</h2>
             <p className="text-slate-300 leading-relaxed text-sm max-w-2xl">
-              傳統平台用「擊敗了全球 99% 的使用者」來製造焦慮。但本系統秉持《How People Learn》的社群中心精神，我們不設排行榜。我們建立了一個<strong>允許「因學習而犯錯」的安全環境</strong>。請大方分享您的 Bug 與盲點，您的每一次跌倒，都能成為同儕最好的認知鷹架。
+              本系統秉持《How People Learn》的社群中心精神，我們建立了一個<strong>允許「因學習而犯錯」的安全環境</strong>。請大方分享您的 Bug 與盲點，您的每一次跌倒，都能成為同儕最好的認知鷹架。
             </p>
           </div>
           
           <div className="shrink-0 relative z-10 w-full md:w-auto">
-            <button className="w-full md:w-auto bg-[#2563EB] hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
-              <span className="text-lg">✍️</span> 貢獻我的踩坑筆記
+            <button 
+              onClick={() => setShowPostForm(!showPostForm)}
+              className="w-full md:w-auto bg-[#2563EB] hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+            >
+              <span className="text-lg">{showPostForm ? '❌' : '✍️'}</span> 
+              {showPostForm ? '取消撰寫' : '貢獻我的踩坑筆記'}
             </button>
           </div>
         </section>
 
-        {/* 社群動態區塊 */}
+        {showPostForm && (
+          <section className="bg-white border-2 border-blue-200 rounded-3xl p-6 md:p-8 shadow-md animate-fade-in relative">
+            <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+              <span>📝</span> 新增社群筆記
+            </h3>
+            <form onSubmit={handleSubmitPost} className="space-y-5">
+              <div className="flex gap-4">
+                <label className="flex-1 cursor-pointer">
+                  <input type="radio" name="postType" className="peer sr-only" checked={newPost.type === 'bug'} onChange={() => setNewPost({...newPost, type: 'bug'})} />
+                  <div className="p-3 text-center rounded-xl border-2 peer-checked:border-red-500 peer-checked:bg-red-50 peer-checked:text-red-700 text-slate-500 border-slate-200 font-bold transition-all">
+                    🪲 踩坑筆記 (Bug)
+                  </div>
+                </label>
+                <label className="flex-1 cursor-pointer">
+                  <input type="radio" name="postType" className="peer sr-only" checked={newPost.type === 'share'} onChange={() => setNewPost({...newPost, type: 'share'})} />
+                  <div className="p-3 text-center rounded-xl border-2 peer-checked:border-green-500 peer-checked:bg-green-50 peer-checked:text-green-700 text-slate-500 border-slate-200 font-bold transition-all">
+                    💡 心得分享 (Share)
+                  </div>
+                </label>
+              </div>
+
+              <div>
+                <input required type="text" placeholder="輸入標題 (例如：永遠搞不懂的雙指標邊界...)" value={newPost.title} onChange={e => setNewPost({...newPost, title: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 font-medium" />
+              </div>
+              
+              <div>
+                <textarea required placeholder="描述您的經驗或問題，這將成為他人的認知鷹架..." value={newPost.content} onChange={e => setNewPost({...newPost, content: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 min-h-[120px] resize-none"></textarea>
+              </div>
+
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <input type="text" placeholder="標籤 (用逗號分隔，如：動態規劃, 求救)" value={newPost.tags} onChange={e => setNewPost({...newPost, tags: e.target.value})} className="w-full sm:w-1/2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                
+                <div className="flex items-center gap-4 w-full sm:w-auto justify-between">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600 bg-slate-100 px-3 py-2 rounded-lg">
+                    <input type="checkbox" checked={newPost.isAnonymous} onChange={e => setNewPost({...newPost, isAnonymous: e.target.checked})} className="accent-blue-600 w-4 h-4" />
+                    🛡️ 匿名發佈
+                  </label>
+                  <button type="submit" className="bg-slate-900 text-white font-bold py-2.5 px-8 rounded-xl hover:bg-blue-600 transition-colors">
+                    送出發佈
+                  </button>
+                </div>
+              </div>
+            </form>
+          </section>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          
-          {/* 左側：過濾與貼文列表 */}
           <div className="lg:col-span-2 space-y-6">
             
-            {/* 標籤切換 */}
             <div className="flex gap-2 p-1 bg-slate-100 rounded-xl inline-flex w-full sm:w-auto overflow-x-auto">
-              {[
-                { id: 'bugs', label: '🪲 踩坑博物館 (Bug Hall of Fame)' },
-                { id: 'share', label: '💡 認知鷹架分享 (Knowledge Share)' },
-                { id: 'all', label: '🌐 全部動態 (All Activity)' }
-              ].map(tab => (
+              {[{ id: 'bugs', label: '🪲 踩坑博物館 (Bugs)' }, { id: 'share', label: '💡 認知鷹架 (Shares)' }, { id: 'all', label: '🌐 全部動態' }].map(tab => (
                 <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  key={tab.id} onClick={() => setActiveTab(tab.id)}
                   className={`px-5 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${
-                    activeTab === tab.id 
-                      ? 'bg-white text-slate-900 shadow-sm' 
-                      : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                    activeTab === tab.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
                   }`}
                 >
                   {tab.label}
@@ -107,12 +203,16 @@ export default function Library() {
               ))}
             </div>
 
-            {/* 貼文卡片渲染 */}
             <div className="space-y-4">
+              {communityPosts.length === 0 && (
+                <div className="text-center py-10 text-slate-400">目前還沒有貼文，成為第一個分享的人吧！</div>
+              )}
               {communityPosts
                 .filter(post => activeTab === 'all' || post.type === (activeTab === 'bugs' ? 'bug' : 'share') || (activeTab === 'bugs' && post.type === 'bug'))
                 .map(post => (
-                <div key={post.id} className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <div key={post.id} className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative group">
+                  
+                  {/* 🌟 貼文標頭與垃圾桶按鈕 */}
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-xl border border-slate-200">
@@ -121,50 +221,62 @@ export default function Library() {
                       <div>
                         <div className="font-bold text-slate-900 flex items-center gap-2">
                           {post.author}
-                          {post.isAnonymous && <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-normal">匿名保護機制</span>}
+                          {post.is_anonymous && <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-normal">匿名</span>}
                         </div>
-                        <div className="text-xs text-slate-400">剛剛發佈</div>
+                        <div className="text-xs text-slate-400">{getTimeAgo(post.created_at)}</div>
                       </div>
                     </div>
-                    {post.type === 'bug' ? (
-                      <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2.5 py-1 rounded-full border border-red-100 uppercase tracking-wide">Bug 求救 / 分享</span>
-                    ) : (
-                      <span className="bg-green-50 text-green-600 text-[10px] font-bold px-2.5 py-1 rounded-full border border-green-100 uppercase tracking-wide">心得貢獻</span>
-                    )}
+                    
+                    <div className="flex items-center gap-3">
+                      {post.type === 'bug' ? (
+                        <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2.5 py-1 rounded-full border border-red-100 uppercase tracking-wide">Bug 筆記</span>
+                      ) : (
+                        <span className="bg-green-50 text-green-600 text-[10px] font-bold px-2.5 py-1 rounded-full border border-green-100 uppercase tracking-wide">心得貢獻</span>
+                      )}
+                      
+                      {/* 🌟 刪除按鈕 (Hover 時顯示更明顯) */}
+                      <button 
+                        onClick={() => handleDeletePost(post.id)}
+                        className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors"
+                        title="刪除此貼文"
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
                   
                   <h3 className="text-lg font-bold text-slate-800 mb-2">{post.title}</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed mb-4">{post.content}</p>
+                  <p className="text-slate-600 text-sm leading-relaxed mb-4 whitespace-pre-wrap">{post.content}</p>
                   
                   <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-50">
-                    <div className="flex gap-2">
-                      {post.tags.map(tag => (
-                        <span key={tag} className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-md">#{tag}</span>
+                    <div className="flex flex-wrap gap-2">
+                      {post.tags && post.tags.map((tag, idx) => (
+                        <span key={idx} className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-md">#{tag}</span>
                       ))}
                     </div>
-                    <button className="flex items-center gap-1.5 text-slate-400 hover:text-red-500 transition-colors text-sm font-medium">
+                    <button 
+                      onClick={() => handleLike(post.id, post.likes)}
+                      className="flex items-center gap-1.5 text-slate-400 hover:text-red-500 transition-colors text-sm font-bold bg-slate-50 px-3 py-1.5 rounded-lg hover:bg-red-50"
+                    >
                       <span>❤️</span> {post.likes} 
-                      <span className="ml-1 hidden sm:inline">({post.type === 'bug' ? '感同身受' : '感謝貢獻'})</span>
+                      <span className="ml-1 hidden sm:inline text-xs font-normal">({post.type === 'bug' ? '感同身受' : '感謝貢獻'})</span>
                     </button>
                   </div>
                 </div>
               ))}
             </div>
-
           </div>
 
-          {/* 右側：側邊欄 (HPL 理論實踐說明) */}
+          {/* 右側側邊欄維持不變 */}
           <div className="space-y-6">
-            
             <div className="bg-blue-50 border border-blue-100 rounded-3xl p-6">
               <h3 className="flex items-center gap-2 font-bold text-blue-900 mb-2">
                 <span>🛡️</span> 匿名提問保護機制
               </h3>
               <p className="text-xs text-blue-800 leading-relaxed">
-                害怕問出太基礎的問題被笑嗎？本平台支援<strong>完全匿名發問</strong>。在這裡，不懂不是羞恥，不問才是遺憾。
+                害怕問出太基礎的問題被笑嗎？本平台發文支援<strong>完全匿名</strong>。在這裡，不懂不是羞恥，不問才是遺憾。
               </p>
             </div>
-
             <div className="bg-amber-50 border border-amber-100 rounded-3xl p-6 shadow-sm">
               <h4 className="text-xs font-bold text-amber-800 uppercase tracking-widest mb-3">HPL 理論實踐：社群中心</h4>
               <p className="text-sm text-amber-900 leading-relaxed mb-4">
@@ -177,11 +289,10 @@ export default function Library() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5">✅</span> 
-                  <span><strong>建立安全環境：</strong> 設立「踩坑博物館」，讓學生知道「犯錯」是漸進正式化必經的過程，降低防衛心態 (Risk-taking)。</span>
+                  <span><strong>建立安全環境：</strong> 設立「踩坑博物館」，讓學生知道「犯錯」是漸進正式化必經的過程，降低防衛心態。</span>
                 </li>
               </ul>
             </div>
-
           </div>
 
         </div>

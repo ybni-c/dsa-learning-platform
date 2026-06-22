@@ -14,19 +14,24 @@ export default function VirtualClassroom() {
   const [language, setLanguage] = useState('javascript');
   const [code, setCode] = useState(starterCode['javascript']);
   
-  // 任務導向學習倒數計時器
-  const [timeLeft, setTimeLeft] = useState(900); 
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  // 🌟 終端機與執行狀態
+  const [consoleOutput, setConsoleOutput] = useState('');
+  const [isExecuting, setIsExecuting] = useState(false);
 
+  // 🌟 Phase 4: 任務導向學習狀態
+  const [timeLeft, setTimeLeft] = useState(900); 
+  const [missionStatus, setMissionStatus] = useState('idle'); // idle, running, deploying, success, failed
+
+  // 計時器邏輯
   useEffect(() => {
     let timer;
-    if (activePhase === 4 && isTimerRunning && timeLeft > 0) {
+    if (activePhase === 4 && missionStatus === 'running' && timeLeft > 0) {
       timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-    } else if (timeLeft === 0) {
-      setIsTimerRunning(false);
+    } else if (timeLeft === 0 && missionStatus === 'running') {
+      setMissionStatus('failed'); // 時間到，伺服器崩潰
     }
     return () => clearInterval(timer);
-  }, [activePhase, isTimerRunning, timeLeft]);
+  }, [activePhase, missionStatus, timeLeft]);
 
   const formatCountdown = (seconds) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -45,12 +50,56 @@ export default function VirtualClassroom() {
     return exts[lang];
   };
 
-  const startMission = () => setIsTimerRunning(true);
+  // 處理切換 Phase 時的狀態重置
+  const handlePhaseChange = (id) => {
+    setActivePhase(id);
+    setConsoleOutput('');
+    setIsExecuting(false);
+    if (id !== 4 && missionStatus !== 'idle') {
+      setMissionStatus('idle');
+      setTimeLeft(900);
+    }
+  };
+
+  // 🌟 Phase 3: 模擬執行程式碼 (Run Code)
+  const handleRunCode = () => {
+    if (isExecuting) return;
+    setIsExecuting(true);
+    setConsoleOutput('> Initiating secure container...\n> Compiling code...');
+
+    // 模擬網路延遲與執行時間
+    setTimeout(() => {
+      setConsoleOutput(prev => prev + '\n> Running 52 test cases...\n> \n> ✅ Accepted!\n> Runtime: 42 ms (Beats 89.5%)\n> Memory: 16.4 MB\n> Time Complexity: O(n) Validated\n> \n> 🎯 系統提示：您的肌肉記憶正在穩步強化！');
+      setIsExecuting(false);
+    }, 1500);
+  };
+
+  // 🌟 Phase 4: 啟動任務
+  const startMission = () => {
+    setTimeLeft(900);
+    setMissionStatus('running');
+    setConsoleOutput('> System under heavy load...\n> Awaiting emergency patch deployment...');
+  };
+
+  // 🌟 Phase 4: 模擬部署到正式環境 (Deploy)
+  const handleDeploy = () => {
+    if (missionStatus !== 'running') return;
+    setMissionStatus('deploying');
+    setConsoleOutput('> Initiating emergency deployment...\n> Bypassing standard CI/CD due to critical load...');
+
+    setTimeout(() => {
+      setConsoleOutput(prev => prev + '\n> Compiling optimal DP graph...\n> Routing traffic to new instances...');
+    }, 1500);
+
+    setTimeout(() => {
+      setMissionStatus('success');
+      setConsoleOutput(prev => prev + '\n> \n> 🚀 SUCCESS: Traffic stabilized!\n> Server load reduced by 85%. You saved the company!');
+    }, 3500);
+  };
 
   return (
     <div className="min-h-screen bg-[#FDFCFB] text-slate-800 font-sans flex flex-col animate-fade-in">
       
-      {/* 頂部標頭 */}
       <header className="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shrink-0 shadow-md z-10">
         <div className="flex items-center gap-4">
           <Link to="/dashboard" className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
@@ -66,14 +115,11 @@ export default function VirtualClassroom() {
         </div>
       </header>
 
-      {/* 🌟 核心調整：手機版垂直 flex-col，大螢幕 lg:flex-row，且手機版取消 overflow-hidden 避免阻擋滾動 */}
       <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden">
         
-        {/* 左側主要工作區：在大螢幕放大 max-w-7xl */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-8 lg:p-12">
           <div className="max-w-7xl mx-auto space-y-8">
             
-            {/* Phase 1: 結構化知識 - 非正式概念 */}
             {activePhase === 1 && (
               <div className="space-y-6 animate-fade-in max-w-3xl">
                 <div className="inline-block px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-bold tracking-widest uppercase">Structural-Knowledge: Phase 1</div>
@@ -95,7 +141,6 @@ export default function VirtualClassroom() {
               </div>
             )}
 
-            {/* Phase 2: 結構化知識 - 漸進正式化 */}
             {activePhase === 2 && (
               <div className="space-y-6 animate-fade-in max-w-3xl">
                 <div className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold tracking-widest uppercase">Structural-Knowledge: Phase 2</div>
@@ -116,13 +161,11 @@ export default function VirtualClassroom() {
               </div>
             )}
 
-            {/* Phase 3: 結構化知識 - 技能自動化 */}
             {activePhase === 3 && (
               <div className="space-y-4 animate-fade-in flex flex-col h-full">
                 <div className="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold tracking-widest uppercase mb-2 w-max">Structural-Knowledge: Phase 3</div>
                 <h3 className="text-2xl sm:text-3xl font-serif text-slate-900">技能自動化：刻意練習區</h3>
                 
-                {/* 基礎練習編輯器：高度放大至 min-h-[70vh] */}
                 <div className="min-h-[70vh] flex flex-col bg-[#1E1E1E] rounded-2xl overflow-hidden border border-slate-700 shadow-2xl mt-2">
                   <div className="bg-[#2D2D2D] px-4 py-3 flex items-center justify-between border-b border-slate-700">
                     <div className="flex items-center gap-2">
@@ -131,23 +174,38 @@ export default function VirtualClassroom() {
                       <div className="w-3 h-3 rounded-full bg-green-500"></div>
                       <span className="ml-2 text-sm font-mono text-slate-300 font-bold">solution.{getFileExtension(language)}</span>
                     </div>
-                    <select value={language} onChange={handleLanguageChange} className="bg-[#1E1E1E] text-slate-300 text-sm font-mono border border-slate-600 rounded px-3 py-1.5">
+                    <select value={language} onChange={handleLanguageChange} className="bg-[#1E1E1E] text-slate-300 text-sm font-mono border border-slate-600 rounded px-3 py-1.5 focus:outline-none focus:border-blue-500">
                       <option value="javascript">JavaScript</option>
                       <option value="python">Python 3</option>
                       <option value="cpp">C++</option>
                       <option value="java">Java</option>
                     </select>
                   </div>
-                  <textarea value={code} onChange={(e) => setCode(e.target.value)} className="flex-1 w-full bg-transparent text-[#D4D4D4] font-mono text-base leading-relaxed p-6 focus:outline-none resize-none" spellCheck="false"></textarea>
+                  
+                  <textarea 
+                    value={code} onChange={(e) => setCode(e.target.value)} 
+                    className="flex-1 w-full bg-transparent text-[#D4D4D4] font-mono text-base leading-relaxed p-6 focus:outline-none resize-none" spellCheck="false">
+                  </textarea>
+
+                  {/* 🌟 Phase 3 終端機畫面 */}
+                  <div className="h-32 bg-[#0D0D0D] border-t border-slate-700 p-4 overflow-y-auto font-mono text-sm text-green-400 whitespace-pre-wrap shadow-inner">
+                    {consoleOutput || '> Ready for execution. Press Run Code to start.'}
+                  </div>
+                  
                   <div className="bg-[#2D2D2D] px-6 py-4 flex justify-between items-center border-t border-slate-700">
-                    <span className="text-sm text-slate-400">基礎鷹架輔助已開啟，無時間限制。</span>
-                    <button className="bg-green-600 hover:bg-green-500 text-white text-sm font-bold px-6 py-2.5 rounded-lg transition-colors">▶ Run Code</button>
+                    <span className="text-sm text-slate-400 hidden sm:block">基礎鷹架輔助已開啟，無時間限制。</span>
+                    <button 
+                      onClick={handleRunCode}
+                      disabled={isExecuting}
+                      className={`text-white text-sm font-bold px-6 py-2.5 rounded-lg transition-all shadow-sm ${isExecuting ? 'bg-green-800 cursor-not-allowed opacity-70' : 'bg-green-600 hover:bg-green-500 hover:-translate-y-0.5'}`}
+                    >
+                      {isExecuting ? '⏳ Executing...' : '▶ Run Code'}
+                    </button>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* 🌟 Phase 4: 探究式計畫板與 Coding Editor 同步極大化 */}
             {activePhase === 4 && (
               <div className="space-y-6 animate-fade-in flex flex-col h-full">
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
@@ -160,19 +218,18 @@ export default function VirtualClassroom() {
                   </div>
                   
                   {/* 倒數計時器 */}
-                  <div className={`text-center p-4 rounded-2xl border-2 shadow-sm shrink-0 w-full sm:w-auto ${timeLeft < 300 ? 'bg-red-50 border-red-200 text-red-700 animate-pulse' : 'bg-slate-900 border-slate-800 text-white'}`}>
+                  <div className={`text-center p-4 rounded-2xl border-2 shadow-sm shrink-0 w-full sm:w-auto ${timeLeft < 300 && missionStatus === 'running' ? 'bg-red-50 border-red-200 text-red-700 animate-pulse' : 'bg-slate-900 border-slate-800 text-white'}`}>
                     <div className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-80">Server Crash In</div>
                     <div className="text-2xl sm:text-3xl font-mono font-bold tracking-wider">{formatCountdown(timeLeft)}</div>
-                    {!isTimerRunning && timeLeft === 900 && (
+                    {missionStatus === 'idle' && (
                       <button onClick={startMission} className="mt-2 text-xs bg-white text-slate-900 px-3 py-1 rounded-md font-bold hover:bg-slate-200 transition-colors w-full">Accept Mission</button>
                     )}
                   </div>
                 </div>
 
-                {/* 🌟 佈局極大化：利用 lg:grid-cols-12 重新分配空間 (計畫板 4 格 / 編輯器 8 格) */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch mt-2">
                   
-                  {/* 🕵️‍♂️ 探究式計畫板 (大空間配置： col-span-4) */}
+                  {/* 探究式計畫板 */}
                   <div className="grid lg:col-span-4 bg-purple-50/60 border border-purple-100 p-6 rounded-2xl flex flex-col min-h-[300px] lg:min-h-full">
                     <h4 className="font-bold text-purple-900 mb-2 flex items-center gap-2">
                       <span>🕵️‍♂️</span> 探究式計畫板 (Inquiry Plan)
@@ -183,17 +240,39 @@ export default function VirtualClassroom() {
                     <textarea 
                       className="flex-1 w-full bg-white border border-purple-200 rounded-xl p-4 text-base leading-relaxed text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-inner"
                       placeholder="1. 我的核心提問是...\n2. 已知流量極值為...\n3. 狀態方程式推導: dp[i] = ..."
-                      disabled={!isTimerRunning}
+                      disabled={missionStatus !== 'running'}
                     ></textarea>
                   </div>
 
-                  {/* 💻 Coding Editor (巨大化配置： col-span-8，高度提升至 min-h-[75vh]) */}
-                  <div className="grid lg:col-span-8 min-h-[75vh] bg-[#1E1E1E] rounded-2xl overflow-hidden border border-slate-700 shadow-2xl relative">
-                    {!isTimerRunning && timeLeft === 900 && (
-                      <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm z-20 flex flex-col items-center justify-center text-white p-6">
+                  {/* Coding Editor */}
+                  <div className="grid lg:col-span-8 min-h-[75vh] bg-[#1E1E1E] rounded-2xl overflow-hidden border border-slate-700 shadow-2xl relative flex flex-col">
+                    
+                    {/* 🌟 任務失敗 Overlay */}
+                    {missionStatus === 'failed' && (
+                      <div className="absolute inset-0 bg-red-900/90 backdrop-blur-md z-30 flex flex-col items-center justify-center text-white p-6 text-center animate-fade-in">
+                        <span className="text-6xl mb-4">💥</span>
+                        <h3 className="text-3xl font-bold mb-2">伺服器已崩潰</h3>
+                        <p className="text-slate-300 max-w-md mb-8">流量超載，系統未能及時獲得最佳化演算法。這就是真實工程世界的殘酷與限制。</p>
+                        <button onClick={startMission} className="bg-white text-red-900 px-8 py-3 rounded-xl font-bold shadow-lg hover:scale-105 transition-transform">重新挑戰 (Respawn)</button>
+                      </div>
+                    )}
+
+                    {/* 🌟 任務成功 Overlay */}
+                    {missionStatus === 'success' && (
+                      <div className="absolute inset-0 bg-green-900/90 backdrop-blur-md z-30 flex flex-col items-center justify-center text-white p-6 text-center animate-fade-in">
+                        <span className="text-6xl mb-4">🏆</span>
+                        <h3 className="text-3xl font-bold mb-2">危機解除！</h3>
+                        <p className="text-green-100 max-w-md mb-8">您成功在時限內部署了 O(n) 的最佳化解法。這就是<strong>任務導向學習</strong>為您培養出的抗壓能力與 AQ！</p>
+                        <button onClick={() => setMissionStatus('idle')} className="bg-white text-green-900 px-8 py-3 rounded-xl font-bold shadow-lg hover:scale-105 transition-transform">返回訓練艙</button>
+                      </div>
+                    )}
+
+                    {/* 🌟 任務待命中 Overlay */}
+                    {missionStatus === 'idle' && (
+                      <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm z-20 flex flex-col items-center justify-center text-white p-6 animate-fade-in">
                         <span className="text-4xl mb-3">⚠️</span>
                         <h3 className="text-lg font-bold mb-1">任務導向壓力測試 (Mission-Based)</h3>
-                        <p className="text-xs text-slate-400 max-w-md text-center mb-6">點密碼艙按鈕開始計時。獨立突圍以建立面對逆境的 AQ 核心素養。</p>
+                        <p className="text-xs text-slate-400 max-w-md text-center mb-6">點擊上方 Accept Mission 開始計時。獨立突圍以建立面對逆境的 AQ 核心素養。</p>
                         <button onClick={startMission} className="bg-purple-600 hover:bg-purple-500 px-6 py-2.5 rounded-xl font-bold text-sm transition-transform hover:scale-105 shadow-md">點此開始鎖定計時</button>
                       </div>
                     )}
@@ -205,23 +284,32 @@ export default function VirtualClassroom() {
                         <div className="w-3 h-3 rounded-full bg-green-500"></div>
                         <span className="ml-2 text-sm font-mono text-slate-300 font-bold">optimize_server.{getFileExtension(language)}</span>
                       </div>
-                      <select value={language} onChange={handleLanguageChange} disabled={!isTimerRunning} className="bg-[#1E1E1E] text-slate-300 text-sm font-mono border border-slate-600 rounded px-3 py-1.5 focus:outline-none">
+                      <select value={language} onChange={handleLanguageChange} disabled={missionStatus !== 'running'} className="bg-[#1E1E1E] text-slate-300 text-sm font-mono border border-slate-600 rounded px-3 py-1.5 focus:outline-none">
                         <option value="javascript">JavaScript</option>
                         <option value="python">Python 3</option>
                       </select>
                     </div>
 
                     <textarea 
-                      value={code} onChange={(e) => setCode(e.target.value)} disabled={!isTimerRunning}
+                      value={code} onChange={(e) => setCode(e.target.value)} disabled={missionStatus !== 'running'}
                       className="flex-1 w-full bg-transparent text-[#D4D4D4] font-mono text-base leading-relaxed p-6 focus:outline-none resize-none" spellCheck="false"
                     ></textarea>
                     
+                    {/* 🌟 Phase 4 終端機畫面 */}
+                    <div className="h-40 bg-[#0D0D0D] border-t border-slate-700 p-4 overflow-y-auto font-mono text-sm text-purple-400 whitespace-pre-wrap shadow-inner">
+                      {consoleOutput || '> System standing by...'}
+                    </div>
+
                     <div className="bg-[#2D2D2D] px-6 py-4 flex justify-between items-center border-t border-slate-700">
-                      <span className="text-xs sm:text-sm text-amber-500 font-medium flex items-center gap-2">
+                      <span className="text-xs sm:text-sm text-amber-500 font-medium flex items-center gap-2 hidden sm:flex">
                         <span className="animate-pulse">🔥</span> 社會鷹架關閉，獨立除錯中
                       </span>
-                      <button disabled={!isTimerRunning} className={`text-white text-sm font-bold px-6 py-2.5 rounded-lg transition-colors shadow-sm ${isTimerRunning ? 'bg-purple-600 hover:bg-purple-500' : 'bg-slate-600 cursor-not-allowed'}`}>
-                        Deploy to Production
+                      <button 
+                        onClick={handleDeploy}
+                        disabled={missionStatus !== 'running'} 
+                        className={`text-white text-sm font-bold px-8 py-3 rounded-lg transition-all shadow-sm ${missionStatus === 'running' ? 'bg-purple-600 hover:bg-purple-500 hover:-translate-y-0.5 shadow-purple-500/30' : 'bg-slate-600 cursor-not-allowed opacity-50'}`}
+                      >
+                        {missionStatus === 'deploying' ? '⏳ Deploying...' : '🚀 Deploy to Production'}
                       </button>
                     </div>
                   </div>
@@ -233,14 +321,10 @@ export default function VirtualClassroom() {
           </div>
         </main>
 
-        {/* 🌟 右側側邊欄：加入 w-full lg:w-[340px]，手機版自動沉底並轉為一般區塊，絕對不會擋到主畫面 */}
         <aside className="w-full lg:w-[340px] bg-white border-t lg:border-t-0 lg:border-l border-slate-200 p-6 shadow-[inset_1px_0_0_rgba(0,0,0,0.05)] flex flex-col shrink-0">
           <h3 className="text-xs font-bold tracking-widest text-slate-400 uppercase mb-6">Network Learning Models</h3>
           
-          {/* 導航按鈕流向 */}
-          <div className="space-y-4 relative before:absolute before:inset-0 before:ml-[1.1rem] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-blue-500 before:to-purple-500 hidden lg:block">
-            {/* 電腦版時保留連線裝飾線，手機版直接簡化排版 */}
-          </div>
+          <div className="space-y-4 relative before:absolute before:inset-0 before:ml-[1.1rem] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-blue-500 before:to-purple-500 hidden lg:block"></div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
             {[
@@ -250,7 +334,7 @@ export default function VirtualClassroom() {
               { id: 4, type: 'Complex', title: '任務導向學習 (Mission-based)', desc: '高壓真實情境，探究式除錯', icon: '🔥', color: 'purple' },
             ].map((step) => (
               <button 
-                key={step.id} onClick={() => setActivePhase(step.id)}
+                key={step.id} onClick={() => handlePhaseChange(step.id)}
                 className={`relative z-10 flex items-start gap-4 p-4 rounded-2xl text-left transition-all duration-300 w-full ${
                   activePhase === step.id 
                     ? (step.color === 'purple' ? 'bg-purple-50 border border-purple-200 shadow-sm scale-102' : 'bg-blue-50 border border-blue-200 shadow-sm scale-102') 
