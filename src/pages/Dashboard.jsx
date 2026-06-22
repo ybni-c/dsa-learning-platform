@@ -11,25 +11,11 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // 必須確認有 currentUser 再去抓資料
-    if (!currentUser) return; 
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setCurrentUser(user);
+    });
+  }, []);
 
-    const fetchHistory = async () => {
-      // 🌟 修改點：加上 eq('user_id', currentUser.id)
-      const { data } = await supabase.from('dsa_online_history').select('*').eq('user_id', currentUser.id);
-      if (data) {
-        const historyObj = {};
-        data.forEach(item => { historyObj[item.date] = item.seconds; });
-        setOnlineHistory(historyObj);
-      }
-    };
-    
-    fetchHistory();
-    const interval = setInterval(fetchHistory, 5000); 
-    return () => clearInterval(interval);
-  }, [currentUser]); // 🌟 依賴陣列加上 currentUser
-
-  // 🌟 1. 在設定中加入 targetPhase
   const adaptiveTracks = {
     none: { trackTitle: "🌱 基礎概念建構軌道", scaffoldingLevel: "最高配置 Scaffolding", focusSkill: "引導漸進正式化", recommendedModule: "第 1 章：圖解線性結構與連續記憶體", nextStepRoute: "/classroom", nextStepLabel: "前往教室研習 Phase 1 生活譬喻", targetPhase: 1 },
     basic: { trackTitle: "🛡️ 邊界除錯與邏輯深化軌道", scaffoldingLevel: "漸進提示配置 Graduated Prompting", focusSkill: "後設認知監控", recommendedModule: "第 3 章前置：雙指標邊界練習", nextStepRoute: "/classroom", nextStepLabel: "前往教室挑戰 Phase 3 刻意練習區", targetPhase: 3 },
@@ -65,18 +51,21 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
+    if (!currentUser) return; 
+
     const fetchHistory = async () => {
-      const { data } = await supabase.from('dsa_online_history').select('*');
+      const { data } = await supabase.from('dsa_online_history').select('*').eq('user_id', currentUser.id);
       if (data) {
         const historyObj = {};
         data.forEach(item => { historyObj[item.date] = item.seconds; });
         setOnlineHistory(historyObj);
       }
     };
+    
     fetchHistory();
     const interval = setInterval(fetchHistory, 5000); 
     return () => clearInterval(interval);
-  }, []);
+  }, [currentUser]); 
 
   const handleSaveDiagnostic = (e) => {
     e.preventDefault();
@@ -92,7 +81,6 @@ export default function Dashboard() {
     setIsDiagnosticExpanded(true);
   };
 
-  // 🌟 真實動態進度計算 ( LA 學習分析指標 )
   const completedCount = tasks.filter(task => task.completed).length;
   const macroProgress = tasks.length > 0 ? Math.round(45 + (completedCount * (55 / tasks.length))) : 45;
 
@@ -101,6 +89,23 @@ export default function Dashboard() {
     const h = Math.floor(totalSeconds / 3600);
     const m = Math.floor((totalSeconds % 3600) / 60);
     return `${h}h ${m}m`;
+  };
+
+  // 🌟 新增：專門用來顯示在 Tooltip 上的詳細時間格式化函式
+  const getTooltipText = (day) => {
+    if (day.isEmpty) return '';
+    if (day.trackedSeconds === 0) return `${day.dateStr} : 無研習紀錄`;
+    
+    const h = Math.floor(day.trackedSeconds / 3600);
+    const m = Math.floor((day.trackedSeconds % 3600) / 60);
+    const s = day.trackedSeconds % 60;
+    
+    let timeStr = '';
+    if (h > 0) timeStr += `${h} 小時 `;
+    if (m > 0) timeStr += `${m} 分鐘 `;
+    if (h === 0 && m === 0) timeStr += `${s} 秒`;
+    
+    return `${day.dateStr} : 研習了 ${timeStr.trim()}`;
   };
 
   const getStats = () => {
@@ -120,7 +125,6 @@ export default function Dashboard() {
     { name: '動態規劃演算法 (狀態轉移模型建構)', progress: macroProgress, color: 'bg-amber-500' },
   ];
 
-  // 🌟 計算日曆格子
   const handlePrevMonth = () => setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() - 1, 1));
   const handleNextMonth = () => setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() + 1, 1));
   const generateCalendarDays = () => {
@@ -143,7 +147,6 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans p-4 sm:p-8 md:p-12 animate-fade-in">
       <div className="max-w-7xl mx-auto space-y-8">
         
-        {/* 歡迎標頭 */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 pb-2 border-b border-slate-200">
           <div>
             <h1 className="text-3xl md:text-4xl font-serif text-slate-900 mb-1">
@@ -158,7 +161,6 @@ export default function Dashboard() {
           </Link>
         </header>
 
-        {/* 可收合的適應性診斷精靈 */}
         <section className="bg-white border border-blue-100 rounded-3xl p-6 shadow-sm overflow-hidden transition-all duration-500">
           <div className="flex items-center justify-between cursor-pointer" onClick={() => setIsDiagnosticExpanded(!isDiagnosticExpanded)}>
             <div className="flex items-center gap-3">
@@ -218,13 +220,9 @@ export default function Dashboard() {
           )}
         </section>
 
-        {/* 主要數據面版 */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* 左側與中間：進度與模型 (共 8 格) */}
           <div className="lg:col-span-8 space-y-8">
-            
-            {/* 🌟 終極重頭戲：優化後的自適應模組進度工作艙 (Macro & Micro Syllabus Dashboard) */}
             <section className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
               <div className="flex justify-between items-center flex-wrap gap-2">
                 <div>
@@ -237,15 +235,11 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* 巨觀大進度條 */}
               <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden border border-slate-200/50 shadow-inner">
                 <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-1000 ease-out" style={{ width: `${macroProgress}%` }}></div>
               </div>
 
-              {/* 微觀章節詳細對應地圖 */}
               <div className="mt-8 space-y-4 pt-2">
-                
-                {/* Chapter 1: 已自動抵免狀態 */}
                 <div className="flex items-start gap-4 p-4 bg-slate-50 border border-slate-200/60 rounded-2xl opacity-75">
                   <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-bold text-sm shrink-0">✓</div>
                   <div className="flex-1 min-w-0">
@@ -257,7 +251,6 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Chapter 3: 核心學習目標動態狀態線 (Knowledge-Centered 聯動) */}
                 <div className="p-4 bg-white border-2 border-blue-50 rounded-2xl shadow-sm space-y-4">
                   <div className="flex items-start gap-4">
                     <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-mono font-bold text-sm shrink-0 animate-pulse">3</div>
@@ -270,7 +263,6 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* 微觀元件狀態線 (完美與虛擬教室 4 個 Phase 數據連動) */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-center text-xs font-bold">
                     <div className="bg-emerald-50 text-emerald-700 border border-emerald-200 p-2 rounded-xl">
                       <div className="text-[10px] text-emerald-500 uppercase">Phase 1</div>
@@ -290,7 +282,6 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* 🎯 自適應精準導航按鈕：夾帶 targetPhase 狀態傳送到虛擬教室 */}
                   <div className="pt-2 border-t border-slate-100">
                     <button 
                       onClick={() => navigate(currentTrack.nextStepRoute, { state: { targetPhase: currentTrack.targetPhase } })}
@@ -304,7 +295,6 @@ export default function Dashboard() {
               </div>
             </section>
 
-            {/* OLM 技能量表 */}
             <section className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-bold text-slate-900">開放式學習者模型 (Open Learner Model)</h3>
@@ -329,9 +319,7 @@ export default function Dashboard() {
             </section>
           </div>
 
-          {/* 右側欄：活動摘要與任務清單 (共 4 格) */}
           <div className="lg:col-span-4 space-y-8">
-            {/* 活動摘要卡片 */}
             <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
               <h3 className="text-sm font-bold text-slate-900 mb-4">研習活動統計 (Activity)</h3>
               <div className="grid grid-cols-2 gap-4">
@@ -345,7 +333,6 @@ export default function Dashboard() {
                 </div>
               </div>
               
-              {/* 貼心捷徑小日曆導航 */}
               <div className="mt-4 pt-4 border-t border-slate-100">
                 <div className="flex justify-between items-center mb-3 bg-slate-50 py-1.5 px-3 rounded-xl border border-slate-100">
                   <button onClick={handlePrevMonth} className="text-xs bg-white border border-slate-200 rounded px-1.5 py-0.5 font-bold hover:bg-slate-100">←</button>
@@ -357,13 +344,22 @@ export default function Dashboard() {
                 </div>
                 <div className="grid grid-cols-7 gap-1">
                   {generateCalendarDays().map((day) => (
-                    <div key={day.id} className={`w-full aspect-square rounded ${day.isEmpty ? 'bg-transparent' : day.isActive ? 'bg-emerald-200 border border-emerald-300' : 'bg-slate-100'}`}></div>
+                    <div 
+                      key={day.id} 
+                      title={getTooltipText(day)} // 🌟 這裡加上原生 Tooltip 提示
+                      className={`w-full aspect-square rounded cursor-pointer transition-colors ${
+                        day.isEmpty 
+                          ? 'bg-transparent cursor-default' 
+                          : day.isActive 
+                            ? 'bg-emerald-300 border border-emerald-400 hover:bg-emerald-400' 
+                            : 'bg-slate-100 hover:bg-slate-200'
+                      }`}
+                    ></div>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* 本週學習挑戰任務 */}
             <TaskList title="本週學習挑戰 (Weekly Tasks)" tasks={tasks} onToggleTask={handleToggleTask} />
           </div>
 
