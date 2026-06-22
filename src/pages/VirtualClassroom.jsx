@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom'; // 🌟 新增匯入 useLocation
 
 export default function VirtualClassroom() {
-  const [activePhase, setActivePhase] = useState(1);
+  const location = useLocation(); // 🌟 取得前一個頁面傳來的狀態
+  
+  // 🌟 動態設定初始 Phase：如果有傳 targetPhase 就用它，沒有就預設為 1
+  const [activePhase, setActivePhase] = useState(location.state?.targetPhase || 1);
 
+  
   const starterCode = {
     javascript: "function solve(n) {\n  // 請在此處實作您的解法\n  \n}",
     python: "def solve(n):\n    # 請在此處實作您的解法\n    pass",
