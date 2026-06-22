@@ -26,10 +26,13 @@ export default function Completion() {
       }
 
       // 3. 統計累積的雲端在線時數
-      const { data: history } = await supabase.from('dsa_online_history').select('seconds');
       let totalSeconds = 0;
-      if (history) {
-        history.forEach(h => totalSeconds += h.seconds);
+      if (user) {
+        // 🌟 修改點：加上 eq('user_id', user.id)
+        const { data: history } = await supabase.from('dsa_online_history').select('seconds').eq('user_id', user.id);
+        if (history) {
+          history.forEach(h => totalSeconds += h.seconds);
+        }
       }
       const hours = (totalSeconds / 3600).toFixed(1);
 

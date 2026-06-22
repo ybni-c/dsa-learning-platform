@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, Link, useLocation } from 'react-router-dom';
-import TopNavigation from './components/TopNavigation';
 import AIAssistant from './components/AIAssistant';
 import { supabase } from './supabaseClient'; 
 
@@ -12,42 +11,32 @@ import Library from './pages/Library';
 import Feedback from './pages/Feedback';
 import Completion from './pages/Completion';
 
-// 🛡️ 路由守衛組件：用來保護需要登入才能看的頁面
 const ProtectedRoute = ({ children, session }) => {
-  if (!session) {
-    return <Navigate to="/" replace />;
-  }
+  if (!session) return <Navigate to="/" replace />;
   return children;
 };
 
-// 內部主要包裝組件，以便正常呼叫 react-router-dom 的 hooks (如 useLocation)
 const AppContent = () => {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const location = useLocation(); // 取得當前網址路徑
+  const location = useLocation(); 
 
   useEffect(() => {
-    // 1. 初始化抓取 Session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
     });
 
-    // 2. 監聽登入狀態變化
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (_event === 'SIGNED_OUT') {
-        navigate('/');
-      }
+      if (_event === 'SIGNED_OUT') navigate('/');
     });
 
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  // 全域在線計時器 (每秒自動同步累加至 Supabase)
+  // 🌟 修改：精準寫入專屬 user_id 的時間
   useEffect(() => {
     if (!session) return; 
 
@@ -56,22 +45,24 @@ const AppContent = () => {
       const offset = now.getTimezoneOffset();
       const localDate = new Date(now.getTime() - (offset * 60 * 1000));
       const todayStr = localDate.toISOString().split('T')[0];
+      const userId = session.user.id; // 取得當前使用者 ID
 
       try {
+        // 先查詢今天該使用者是否已有紀錄
         const { data } = await supabase
           .from('dsa_online_history')
-          .select('seconds')
+          .select('id, seconds')
+          .eq('user_id', userId)
           .eq('date', todayStr)
-          .single(); 
+          .maybeSingle(); 
 
-        const currentSeconds = data ? data.seconds : 0;
-
-        await supabase
-          .from('dsa_online_history')
-          .upsert(
-            { date: todayStr, seconds: currentSeconds + 1 }, 
-            { onConflict: 'date' } 
-          );
+        if (data) {
+          // 如果有紀錄，秒數 +1
+          await supabase.from('dsa_online_history').update({ seconds: data.seconds + 1 }).eq('id', data.id);
+        } else {
+          // 如果沒有，創建一筆新的
+          await supabase.from('dsa_online_history').insert({ user_id: userId, date: todayStr, seconds: 1 });
+        }
       } catch (err) {
         console.error("計時器同步錯誤:", err);
       }
@@ -89,7 +80,6 @@ const AppContent = () => {
     await supabase.auth.signOut();
   };
 
-  // 自動判斷當前頁面路徑，動態套用藍色高亮底線樣式
   const getNavLinkClass = (path) => {
     const baseClass = "h-16 flex items-center px-1 pt-0.5 border-b-2 text-sm font-semibold tracking-wide transition-all ";
     return location.pathname === path 
@@ -100,19 +90,16 @@ const AppContent = () => {
   return (
     <div className="min-h-screen bg-[#FDFCFB] text-slate-800 font-sans relative flex flex-col">
       
-      {/* 導覽列：登入後自動加載完備的 6 大模組選單連結 */}
-      {session ? (
+      {/* 🌟 修改：只在 session 存在 (已登入) 時才渲染導覽列，未登入時完全隱藏 */}
+      {session && (
         <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm shrink-0">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-            
-            {/* 左側 BRAND LOGO + 完全體選單連結 */}
             <div className="flex items-center gap-8">
               <Link to="/dashboard" className="flex items-center gap-2 group shrink-0">
                 <div className="w-8 h-8 bg-slate-900 group-hover:bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold transition-colors">D</div>
                 <span className="font-serif font-bold text-slate-900 tracking-wide hidden lg:block">Algorithms</span>
               </Link>
               
-              {/* 💻 電腦桌面版：完備的 6 大核心頁面導覽選單 */}
               <nav className="hidden md:flex items-center gap-6 lg:gap-8">
                 <Link to="/dashboard" className={getNavLinkClass('/dashboard')}>學習主頁</Link>
                 <Link to="/course/cs-201" className={getNavLinkClass('/course/cs-201')}>課程大綱</Link>
@@ -123,7 +110,6 @@ const AppContent = () => {
               </nav>
             </div>
             
-            {/* 右側 使用者狀態與登出按鈕 */}
             <div className="flex items-center gap-3 shrink-0">
               <span className="text-xs font-semibold text-slate-500 hidden sm:inline-block bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-full shadow-inner max-w-[140px] lg:max-w-[200px] truncate" title={session.user.email}>
                 👤 {session.user.email}
@@ -137,7 +123,6 @@ const AppContent = () => {
             </div>
           </div>
 
-          {/* 📱 手機行動版底部/下方快捷導航面板 (因應按鈕增加至 6 個，加入自適應 flex-wrap 與間距優化) */}
           <nav className="md:hidden flex flex-wrap justify-around border-t border-slate-100 bg-white py-2 px-1 text-[11px] font-bold shadow-inner gap-x-2 gap-y-1">
             <Link to="/dashboard" className={`px-2 py-0.5 rounded-md ${location.pathname === '/dashboard' ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}`}>主頁</Link>
             <Link to="/course/cs-201" className={`px-2 py-0.5 rounded-md ${location.pathname === '/course/cs-201' ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}`}>大綱</Link>
@@ -147,11 +132,8 @@ const AppContent = () => {
             <Link to="/completion" className={`px-2 py-0.5 rounded-md ${location.pathname === '/completion' ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}`}>證書</Link>
           </nav>
         </header>
-      ) : (
-        <TopNavigation /> // 尚未登入時，顯示預設的簡單未登入導覽列
       )}
       
-      {/* 核心內容路由渲染區 */}
       <main className="flex-1 flex flex-col">
         <Routes>
           <Route path="/" element={<Registration />} />
@@ -164,7 +146,6 @@ const AppContent = () => {
         </Routes>
       </main>
       
-      {/* AI 助教懸浮球 */}
       {session && <AIAssistant />}
     </div>
   );

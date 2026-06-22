@@ -11,8 +11,8 @@ export default function TaskList({ title, tasks, onToggleTask }) {
   // 動態為資料庫的純文字任務加上 HPL 教育學標籤與視覺屬性
   const enrichTaskInfo = (task, index) => {
     // 依據任務順序給予不同的理論定位 (假設前幾個是基礎，後面是挑戰或社群)
-    if (index === 0) return { tag: 'Phase 3: 技能自動化', color: 'text-emerald-700 bg-emerald-50 border-emerald-200', icon: '⌨️', xp: 100 };
-    if (index === 1) return { tag: 'Phase 4: 任務導向挑戰', color: 'text-purple-700 bg-purple-50 border-purple-200', icon: '🔥', xp: 200 };
+    if (index === 0) return { tag: 'Phase 3: 技能自動化', color: 'text-emerald-700 bg-emerald-50 border-emerald-200', icon: '⌨️', xp: 150 };
+    if (index === 1) return { tag: 'Phase 4: 任務導向挑戰', color: 'text-purple-700 bg-purple-50 border-purple-200', icon: '🔥', xp: 150 };
     return { tag: '社群中心: 知識貢獻', color: 'text-amber-700 bg-amber-50 border-amber-200', icon: '🤝', xp: 150 };
   };
 

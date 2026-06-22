@@ -10,12 +10,24 @@ export default function Dashboard() {
   const [currentViewDate, setCurrentViewDate] = useState(new Date(2026, 5, 1)); 
   const navigate = useNavigate();
 
-  // 取得當前登入使用者
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) setCurrentUser(user);
-    });
-  }, []);
+    // 必須確認有 currentUser 再去抓資料
+    if (!currentUser) return; 
+
+    const fetchHistory = async () => {
+      // 🌟 修改點：加上 eq('user_id', currentUser.id)
+      const { data } = await supabase.from('dsa_online_history').select('*').eq('user_id', currentUser.id);
+      if (data) {
+        const historyObj = {};
+        data.forEach(item => { historyObj[item.date] = item.seconds; });
+        setOnlineHistory(historyObj);
+      }
+    };
+    
+    fetchHistory();
+    const interval = setInterval(fetchHistory, 5000); 
+    return () => clearInterval(interval);
+  }, [currentUser]); // 🌟 依賴陣列加上 currentUser
 
   // 🌟 1. 在設定中加入 targetPhase
   const adaptiveTracks = {
