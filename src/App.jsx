@@ -20,7 +20,7 @@ const ProtectedRoute = ({ children, session }) => {
   return children;
 };
 
-// 內部主要包裝組件，以便能正常呼叫 react-router-dom 的 hooks (如 useLocation)
+// 內部主要包裝組件，以便正常呼叫 react-router-dom 的 hooks (如 useLocation)
 const AppContent = () => {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -47,7 +47,7 @@ const AppContent = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  // 全域計時器 (與雲端資料庫同步)
+  // 全域在線計時器 (每秒自動同步累加至 Supabase)
   useEffect(() => {
     if (!session) return; 
 
@@ -89,7 +89,7 @@ const AppContent = () => {
     await supabase.auth.signOut();
   };
 
-  // 🌟 小工具：自動判斷當前頁面，並套用高亮標籤樣式
+  // 自動判斷當前頁面路徑，動態套用藍色高亮底線樣式
   const getNavLinkClass = (path) => {
     const baseClass = "h-16 flex items-center px-1 pt-0.5 border-b-2 text-sm font-semibold tracking-wide transition-all ";
     return location.pathname === path 
@@ -100,54 +100,58 @@ const AppContent = () => {
   return (
     <div className="min-h-screen bg-[#FDFCFB] text-slate-800 font-sans relative flex flex-col">
       
-      {/* 🌟 核心升級：功能完全、支援手機 RWD 的全雲端聯網導覽列 */}
+      {/* 導覽列：登入後自動加載完備的 6 大模組選單連結 */}
       {session ? (
         <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm shrink-0">
-          <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
             
-            {/* 左側 BRAND LOGO + 選單 */}
-            <div className="flex items-center gap-10">
-              <Link to="/dashboard" className="flex items-center gap-2 group">
+            {/* 左側 BRAND LOGO + 完全體選單連結 */}
+            <div className="flex items-center gap-8">
+              <Link to="/dashboard" className="flex items-center gap-2 group shrink-0">
                 <div className="w-8 h-8 bg-slate-900 group-hover:bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold transition-colors">D</div>
-                <span className="font-serif font-bold text-slate-900 tracking-wide hidden sm:block">Algorithms</span>
+                <span className="font-serif font-bold text-slate-900 tracking-wide hidden lg:block">Algorithms</span>
               </Link>
               
-              {/* 大螢幕桌面版選單連結 (精準對應網站藍圖功能) */}
-              <nav className="hidden md:flex items-center gap-8">
+              {/* 💻 電腦桌面版：完備的 6 大核心頁面導覽選單 */}
+              <nav className="hidden md:flex items-center gap-6 lg:gap-8">
                 <Link to="/dashboard" className={getNavLinkClass('/dashboard')}>學習主頁</Link>
+                <Link to="/course/cs-201" className={getNavLinkClass('/course/cs-201')}>課程大綱</Link>
                 <Link to="/classroom" className={getNavLinkClass('/classroom')}>虛擬教室</Link>
                 <Link to="/library" className={getNavLinkClass('/library')}>共學資源</Link>
                 <Link to="/feedback" className={getNavLinkClass('/feedback')}>自我評量</Link>
+                <Link to="/completion" className={getNavLinkClass('/completion')}>結業證書</Link>
               </nav>
             </div>
             
-            {/* 右側 使用者資訊 badge + 登出按鈕 */}
-            <div className="flex items-center gap-4">
-              <span className="text-xs font-semibold text-slate-500 hidden sm:inline-block bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-full shadow-inner max-w-[180px] truncate" title={session.user.email}>
+            {/* 右側 使用者狀態與登出按鈕 */}
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="text-xs font-semibold text-slate-500 hidden sm:inline-block bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-full shadow-inner max-w-[140px] lg:max-w-[200px] truncate" title={session.user.email}>
                 👤 {session.user.email}
               </span>
               <button 
                 onClick={handleSignOut} 
-                className="text-xs font-bold text-red-500 hover:text-white border border-red-200 hover:bg-red-500 px-4 py-1.5 rounded-full transition-all"
+                className="text-xs font-bold text-red-500 hover:text-white border border-red-200 hover:bg-red-500 px-3.5 py-1.5 rounded-full transition-all"
               >
                 登出
               </button>
             </div>
           </div>
 
-          {/* 手機版底部/下方快捷導航列 (UX 貼心防呆：大螢幕隱藏，手機版才浮現，防止寬度不夠擠壓) */}
-          <nav className="md:hidden flex justify-around border-t border-slate-100 bg-white py-2 text-xs font-medium shadow-inner">
-            <Link to="/dashboard" className={`px-3 py-1 rounded-md ${location.pathname === '/dashboard' ? 'bg-blue-50 text-blue-600 font-bold' : 'text-slate-500'}`}>主頁</Link>
-            <Link to="/classroom" className={`px-3 py-1 rounded-md ${location.pathname === '/classroom' ? 'bg-blue-50 text-blue-600 font-bold' : 'text-slate-500'}`}>教室</Link>
-            <Link to="/library" className={`px-3 py-1 rounded-md ${location.pathname === '/library' ? 'bg-blue-50 text-blue-600 font-bold' : 'text-slate-500'}`}>資源</Link>
-            <Link to="/feedback" className={`px-3 py-1 rounded-md ${location.pathname === '/feedback' ? 'bg-blue-50 text-blue-600 font-bold' : 'text-slate-500'}`}>評量</Link>
+          {/* 📱 手機行動版底部/下方快捷導航面板 (因應按鈕增加至 6 個，加入自適應 flex-wrap 與間距優化) */}
+          <nav className="md:hidden flex flex-wrap justify-around border-t border-slate-100 bg-white py-2 px-1 text-[11px] font-bold shadow-inner gap-x-2 gap-y-1">
+            <Link to="/dashboard" className={`px-2 py-0.5 rounded-md ${location.pathname === '/dashboard' ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}`}>主頁</Link>
+            <Link to="/course/cs-201" className={`px-2 py-0.5 rounded-md ${location.pathname === '/course/cs-201' ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}`}>大綱</Link>
+            <Link to="/classroom" className={`px-2 py-0.5 rounded-md ${location.pathname === '/classroom' ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}`}>教室</Link>
+            <Link to="/library" className={`px-2 py-0.5 rounded-md ${location.pathname === '/library' ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}`}>資源</Link>
+            <Link to="/feedback" className={`px-2 py-0.5 rounded-md ${location.pathname === '/feedback' ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}`}>評量</Link>
+            <Link to="/completion" className={`px-2 py-0.5 rounded-md ${location.pathname === '/completion' ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}`}>證書</Link>
           </nav>
         </header>
       ) : (
-        <TopNavigation /> // 尚未登入時，顯示簡單的未登入導覽列
+        <TopNavigation /> // 尚未登入時，顯示預設的簡單未登入導覽列
       )}
       
-      {/* 核心頁面渲染區 */}
+      {/* 核心內容路由渲染區 */}
       <main className="flex-1 flex flex-col">
         <Routes>
           <Route path="/" element={<Registration />} />

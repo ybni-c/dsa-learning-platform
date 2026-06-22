@@ -1,65 +1,136 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
 
 export default function Completion() {
-  return (
-    <div className="min-h-screen bg-[#FDFCFB] text-slate-800 font-sans p-6 md:p-12 animate-fade-in flex flex-col items-center justify-center relative overflow-hidden">
-      
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-tr from-slate-100 to-[#FFFDF5] rounded-full blur-3xl -z-10"></div>
+  const [userEmail, setUserEmail] = useState('Loading...');
+  const [stats, setStats] = useState({
+    completedTasks: 0,
+    totalHours: '0'
+  });
 
-      <div className="max-w-4xl w-full text-center space-y-10">
+  // 🌟 從雲端抓取真實登入的使用者與歷程數據
+  useEffect(() => {
+    const fetchCertData = async () => {
+      // 1. 抓取當前帳號的 Email
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserEmail(user.email);
+      }
+
+      // 2. 統計完成的學習任務
+      const { data: tasks } = await supabase.from('dsa_tasks').select('completed');
+      let completedCount = 0;
+      if (tasks) {
+        completedCount = tasks.filter(t => t.completed).length;
+      }
+
+      // 3. 統計累積的雲端在線時數
+      const { data: history } = await supabase.from('dsa_online_history').select('seconds');
+      let totalSeconds = 0;
+      if (history) {
+        history.forEach(h => totalSeconds += h.seconds);
+      }
+      const hours = (totalSeconds / 3600).toFixed(1);
+
+      setStats({
+        completedTasks: completedCount,
+        totalHours: hours
+      });
+    };
+
+    fetchCertData();
+  }, []);
+
+  // 🌟 實作真實的列印功能 (列印時會自動隱藏按鈕，只留下證書本體)
+  const handlePrint = () => {
+    window.print();
+  };
+
+  return (
+    <div className="min-h-screen bg-[#FDFCFB] text-slate-800 font-sans p-4 sm:p-12 flex flex-col items-center justify-center animate-fade-in print:bg-white print:p-0">
+      <div className="max-w-4xl w-full space-y-8 print:space-y-0">
         
-        <div>
-          <div className="inline-block px-4 py-1.5 bg-[#F4F5F4] text-[#2E6A4B] rounded-full text-sm font-bold tracking-widest uppercase mb-6 shadow-sm border border-[#E8F0EA]">
-            Course Completion
+        {/* 頂部控制列 (列印時會自動隱藏) */}
+        <div className="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-2xl shadow-sm print:hidden">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Summative Certificate Verified</span>
           </div>
-          <h1 className="text-5xl md:text-6xl font-serif text-slate-900 leading-tight mb-4">
-            恭喜完成修煉，Alex！
-          </h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            您已成功通過「資料結構與演算法核心實戰」的所有章節考核，並在 LeetCode 實戰工作坊中取得了卓越的解題表現。
-          </p>
+          <div className="flex gap-3">
+            <button onClick={handlePrint} className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-5 py-2 rounded-xl transition-transform hover:-translate-y-0.5 shadow-sm">
+              🖨️ 列印 / 儲存為 PDF
+            </button>
+            <Link to="/dashboard" className="border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold px-5 py-2 rounded-xl transition-colors">
+              返回學習主頁
+            </Link>
+          </div>
         </div>
 
-        {/* 證書卡片 (Diploma) */}
-        <div className="relative mx-auto w-full max-w-2xl aspect-[1.414/1] bg-white border-8 border-slate-50 shadow-2xl rounded-sm p-10 flex flex-col items-center justify-center transform rotate-1 hover:rotate-0 transition-transform duration-500">
-          <div className="absolute inset-4 border-2 border-slate-200 border-double"></div>
+        {/* 📜 經典學術證書本體 */}
+        <div className="bg-white border-[16px] border-double border-slate-800 rounded-3xl p-8 sm:p-16 text-center relative shadow-2xl print:shadow-none print:border-[12px] print:my-0">
           
-          <div className="relative z-10 text-center space-y-6">
-            <h2 className="text-3xl font-serif text-slate-800 tracking-widest uppercase mb-8">Certificate of Completion</h2>
-            <p className="text-slate-500 italic font-serif">This is to certify that</p>
-            {/* 🌟 名字已安全替換為普遍常見代稱 Alex */}
-            <h3 className="text-4xl font-serif text-slate-900 border-b border-slate-300 pb-2 inline-block px-10">
-              Alex
-            </h3>
-            <p className="text-slate-500 italic font-serif max-w-md mx-auto">
-              has successfully mastered the concepts of Data Structures, Complexity Analysis, and Advanced Dynamic Programming.
-            </p>
-            <div className="mt-12 flex justify-between w-full px-12 items-end">
-              <div className="text-center">
-                <div className="w-32 border-b border-slate-400 mb-2"></div>
-                <span className="text-xs text-slate-400 uppercase tracking-widest">Date</span>
+          {/* 四角古典花紋裝飾 */}
+          <div className="absolute top-4 left-4 text-slate-300 font-serif text-xl select-none hidden sm:block">❖</div>
+          <div className="absolute top-4 right-4 text-slate-300 font-serif text-xl select-none hidden sm:block">❖</div>
+          <div className="absolute bottom-4 left-4 text-slate-300 font-serif text-xl select-none hidden sm:block">❖</div>
+          <div className="absolute bottom-4 right-4 text-slate-300 font-serif text-xl select-none hidden sm:block">❖</div>
+
+          <div className="space-y-8">
+            {/* 證書大標題 */}
+            <div className="space-y-2">
+              <div className="text-amber-600 font-serif font-bold tracking-widest text-sm uppercase">Certificate of Completion</div>
+              <h1 className="text-4xl sm:text-5xl font-serif text-slate-900 font-medium tracking-wide">結業證明書</h1>
+            </div>
+
+            <div className="w-24 h-0.5 bg-slate-300 mx-auto"></div>
+
+            {/* 頒發內文 */}
+            <div className="space-y-4 max-w-2xl mx-auto">
+              <p className="text-slate-400 font-serif italic text-sm">此證明榮譽頒發予平台認證學員</p>
+              <h2 className="text-2xl sm:text-3xl font-mono font-bold text-blue-700 bg-blue-50/50 inline-block px-6 py-2 rounded-2xl border border-blue-100/50 shadow-inner">
+                {userEmail}
+              </h2>
+              <p className="text-slate-600 leading-relaxed text-base sm:text-lg font-medium pt-4">
+                該學員已成功修畢雲端網際網路精準指引課程<strong>《CS-201 資料結構與演算法核心實戰》</strong>。在學習歷程中，表現出優異的自主探究精神與後設認知監控能力。
+              </p>
+            </div>
+
+            {/* e-Portfolio 實體驗證數據 (與雲端同步) */}
+            <div className="grid grid-cols-2 gap-4 max-w-md mx-auto bg-slate-50 border border-slate-200/60 p-4 rounded-2xl text-left shadow-inner">
+              <div className="border-r border-slate-200 pl-2">
+                <span className="text-[11px] text-slate-400 block uppercase font-bold tracking-wider">已克復學習任務</span>
+                <span className="text-xl font-serif font-bold text-slate-800">{stats.completedTasks} / 3 個演算法任務</span>
               </div>
-              <div className="w-16 h-16 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center shadow-inner">
-                <span className="text-2xl opacity-50">🎖️</span>
-              </div>
-              <div className="text-center">
-                <div className="w-32 border-b border-slate-400 mb-2"></div>
-                <span className="text-xs text-slate-400 uppercase tracking-widest">Instructor</span>
+              <div className="pl-4">
+                <span className="text-[11px] text-slate-400 block uppercase font-bold tracking-wider">累積在線研習時數</span>
+                <span className="text-xl font-serif font-bold text-green-600">{stats.totalHours} 實際小時</span>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* 底部按鈕區 */}
-        <div className="flex flex-col sm:flex-row justify-center gap-4 pt-8">
-          <button className="bg-slate-900 text-white px-8 py-3.5 rounded-full font-bold shadow-lg hover:bg-slate-800 transition-transform hover:-translate-y-0.5 flex items-center justify-center gap-3">
-            <span>📄</span> 下載電子證書 (PDF)
-          </button>
-          {/* 🌟 真實路由跳轉回首頁 */}
-          <Link to="/dashboard" className="bg-white border border-slate-200 text-slate-700 px-8 py-3.5 rounded-full font-bold shadow-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-3">
-            返回學習儀表板
-          </Link>
+            <p className="text-slate-500 text-xs max-w-md mx-auto leading-relaxed pt-2">
+              特發此證，以茲證明。本證書數據經由全域狀態即時分析，並由雲端資料庫 permanent 儲存驗證。
+            </p>
+
+            {/* 證書底部簽章區 */}
+            <div className="flex justify-between items-end pt-12 max-w-xl mx-auto flex-wrap gap-6 text-left">
+              <div className="space-y-1">
+                <div className="text-xs text-slate-400 font-serif">發證日期 (Issued Date)</div>
+                <div className="text-sm font-bold text-slate-700 font-mono">{new Date().toLocaleDateString('zh-TW')}</div>
+              </div>
+              
+              {/* 金色認證徽章 */}
+              <div className="w-16 h-16 bg-amber-100 border-2 border-dashed border-amber-400 rounded-full flex items-center justify-center text-3xl mx-auto sm:mx-0 shadow-sm select-none" title="HPL Certified">
+                🏅
+              </div>
+
+              <div className="space-y-1 border-t border-slate-300 pt-2 w-44 text-center">
+                <div className="font-serif text-sm font-bold text-slate-800">數位學習系統</div>
+                <div className="text-[10px] text-slate-400 tracking-wider">AI TUTOR SYSTEM</div>
+              </div>
+            </div>
+
+          </div>
         </div>
 
       </div>

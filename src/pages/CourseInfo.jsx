@@ -25,21 +25,20 @@ export default function CourseInfo() {
             </p>
             
             <div className="flex flex-wrap gap-4">
+              {/* 🌟 真實功能連結 */}
               <Link to="/dashboard" className="bg-white text-slate-900 px-8 py-3 rounded-full font-bold shadow-sm hover:bg-slate-50 transition-transform hover:-translate-y-0.5 inline-block">
-                立即加入課程
+                進入我的學習主頁
               </Link>
               <Link to="/classroom" className="bg-transparent border border-white/30 text-white px-8 py-3 rounded-full font-medium hover:bg-white/10 transition-colors inline-block">
-                預覽教學大綱
+                預覽虛擬教室
               </Link>
             </div>
           </div>
         </header>
 
-        {/* 🌟 核心升級：教育理念展示區 (完美對應您的評分標準) */}
+        {/* 教育理念展示區 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-          
           <div className="md:col-span-2 space-y-12">
-            
             <section>
               <div className="inline-block px-3 py-1 bg-[#F0F4F8] text-[#2563EB] rounded-full text-xs font-bold tracking-widest uppercase mb-4">
                 Pedagogical Foundation
@@ -68,14 +67,14 @@ export default function CourseInfo() {
             <section>
               <h2 className="text-2xl font-serif text-slate-900 mb-6">多元商數培養 (Expanded Goals)</h2>
               <p className="text-slate-600 leading-relaxed mb-6">
-                面對未來的挑戰，現代工程師需要的遠不止是智商 (IQ)。本平台將複雜的演算法問題設計為「任務導向學習 (Mission-based learning)」，為學員提供以下全方位的能力訓練：
+                面對未來的挑戰，工程師需要的遠不止是智商 (IQ)。本平台將複雜的演算法問題設計為「任務導向學習 (Mission-based learning)」，為學員提供以下全方位的能力訓練：
               </p>
               <ul className="space-y-4">
                 <li className="flex items-start gap-3 bg-[#F8FAFC] p-4 rounded-xl border border-slate-100">
                   <span className="w-8 h-8 rounded-full bg-[#E0E7FF] text-[#2563EB] flex items-center justify-center shrink-0 font-bold text-xs mt-0.5">AQ</span>
                   <div>
                     <strong className="text-slate-800 block mb-1">挫折忍受力 (Adversity Quotient)</strong>
-                    <span className="text-slate-600 text-sm">LeetCode 實戰常伴隨無數次的 Compile Error。我們透過 AI 鷹架 (Scaffolding) 輔助，訓練學員在失敗壓力下將障礙轉化為機會。</span>
+                    <span className="text-slate-600 text-sm">LeetCode 實戰常伴隨無數次的 Compile Error。我們透過 AI 條例輔助，訓練學員在失敗壓力下將障礙轉化為機會。</span>
                   </div>
                 </li>
                 <li className="flex items-start gap-3 bg-[#F8FAFC] p-4 rounded-xl border border-slate-100">
@@ -87,7 +86,6 @@ export default function CourseInfo() {
                 </li>
               </ul>
             </section>
-
           </div>
 
           <div className="space-y-8">
@@ -109,8 +107,8 @@ export default function CourseInfo() {
               </div>
             </section>
           </div>
-
         </div>
+
       </div>
     </div>
   );
