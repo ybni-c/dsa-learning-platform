@@ -70,6 +70,7 @@ export default function Registration() {
   return (
     <div className="min-h-screen bg-[#FDFCFB] flex items-center justify-center p-6 animate-fade-in">
       <div className="max-w-md w-full">
+        
         {/* Logo 區塊 */}
         <div className="text-center mb-10">
           <div className="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-4 shadow-lg shadow-slate-900/20">
@@ -78,7 +79,15 @@ export default function Registration() {
           <h1 className="text-3xl font-serif text-slate-900 mb-2">
             Data Structures & Algorithms
           </h1>
-          <p className="text-slate-500">基於學習科學的適應性演算法訓練平台</p>
+          <p className="text-slate-500 mb-4">基於學習科學的適應性演算法訓練平台</p>
+          
+          {/* 🌟 教授規定的姓名與學號標示區塊 (充滿設計感的開發者徽章) */}
+          <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 px-4 py-2 rounded-full shadow-sm">
+            
+            <span className="text-sm font-bold text-blue-800 tracking-wide">
+              1146023宋昱蓓
+            </span>
+          </div>
         </div>
 
         {/* 登入/註冊卡片 */}
